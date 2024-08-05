@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import classNames from 'classnames';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Todo } from '../types/Todo';
 
 type Props = {
@@ -22,12 +22,6 @@ export const TodoItem: React.FC<Props> = ({
   const [updatedTitle, setUpdatedTitle] = useState(title);
   const [isEditing, setIsEditing] = useState(false);
 
-  const titleField = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    titleField.current?.focus();
-  }, [isEditing]);
-
   const handleKeyUp = (event: React.KeyboardEvent) => {
     if (event.key === 'Escape') {
       setUpdatedTitle(title);
@@ -38,7 +32,7 @@ export const TodoItem: React.FC<Props> = ({
   const handleSubmit = () => {
     if (!updatedTitle.trim()) {
       onDelete(id).then(response => setIsEditing(!!response?.error));
-    } else if (updatedTitle !== title) {
+    } else if (updatedTitle !== title && title !== updatedTitle) {
       const updatedTodo = Object.assign({}, todo);
 
       updatedTodo.title = updatedTitle.trim();
@@ -79,7 +73,7 @@ export const TodoItem: React.FC<Props> = ({
             className="todo__title-field"
             placeholder="Empty todo will be deleted"
             value={updatedTitle}
-            ref={titleField}
+            autoFocus
             onBlur={handleSubmit}
             onKeyUp={handleKeyUp}
             onChange={event => setUpdatedTitle(event.target.value)}

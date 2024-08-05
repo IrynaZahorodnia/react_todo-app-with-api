@@ -1,42 +1,43 @@
 import classNames from 'classnames';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Todo } from '../types/Todo';
-import { USER_ID, addTodo } from '../api/todos';
+import { USER_ID } from '../api/todos';
 import { Error } from '../types/EnumError';
 
 type Props = {
   todos: Todo[];
-  setTodos: (todos: Todo[]) => void;
   showError: (error: string) => void;
   setTempTodo: (tempTodo: Todo | null) => void;
   tempTodo: Todo | null;
   onChange: (todo: Todo) => void;
   activeTodosIds: number[];
+  fieldFocus: React.MutableRefObject<HTMLInputElement | null>;
+  onAdd: (
+    newTitle: string,
+    setNewTitle: (newTitle: string) => void,
+  ) => Promise<void>;
 };
 
 export const Header: React.FC<Props> = ({
   todos,
-  setTodos,
   showError,
   setTempTodo,
   tempTodo,
   onChange,
   activeTodosIds,
+  fieldFocus,
+  onAdd,
 }) => {
   const [newTitle, setNewTitle] = useState('');
 
   const allAreCompleted = todos.every(todo => todo.completed);
-  const field = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    field.current?.focus();
-  }, [todos, showError]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!newTitle.trim()) {
       showError(Error.emptyTitle);
+      fieldFocus.current?.focus();
 
       return;
     }
@@ -48,17 +49,25 @@ export const Header: React.FC<Props> = ({
       id: 0,
     });
 
-    addTodo({ title: newTitle.trim(), completed: false, userId: USER_ID })
-      .then(newTodo => {
-        setTodos([...todos, newTodo]);
-        setNewTitle('');
-      })
-      .catch(() => {
-        showError(Error.add);
-      })
-      .finally(() => {
-        setTempTodo(null);
-      });
+    onAdd(newTitle, setNewTitle);
+  };
+
+  const handleToggle = (todo: Todo) => {
+    if (activeTodosIds.length) {
+      if (activeTodosIds.includes(todo.id)) {
+        const updatedTodo = Object.assign({}, todo);
+
+        updatedTodo.completed = !todo.completed;
+
+        return onChange(updatedTodo);
+      }
+    } else {
+      const updatedTodo = Object.assign({}, todo);
+
+      updatedTodo.completed = !todo.completed;
+
+      return onChange(updatedTodo);
+    }
   };
 
   return (
@@ -71,23 +80,7 @@ export const Header: React.FC<Props> = ({
           })}
           data-cy="ToggleAllButton"
           onClick={() => {
-            todos.forEach(todo => {
-              if (activeTodosIds.length) {
-                if (activeTodosIds.includes(todo.id)) {
-                  const updatedTodo = Object.assign({}, todo);
-
-                  updatedTodo.completed = !todo.completed;
-
-                  return onChange(updatedTodo);
-                }
-              } else {
-                const updatedTodo = Object.assign({}, todo);
-
-                updatedTodo.completed = !todo.completed;
-
-                return onChange(updatedTodo);
-              }
-            });
+            todos.forEach(todo => handleToggle(todo));
           }}
         />
       )}
@@ -98,7 +91,7 @@ export const Header: React.FC<Props> = ({
           type="text"
           className="todoapp__new-todo"
           placeholder="What needs to be done?"
-          ref={field}
+          ref={fieldFocus}
           value={newTitle}
           onChange={event => setNewTitle(event.target.value)}
           disabled={!!tempTodo}

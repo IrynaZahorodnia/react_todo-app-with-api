@@ -1,8 +1,14 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 /* eslint-disable jsx-a11y/control-has-associated-label */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { UserWarning } from './UserWarning';
-import { USER_ID, changeTodo, deleteTodo, getTodos } from './api/todos';
+import {
+  USER_ID,
+  addTodo,
+  changeTodo,
+  deleteTodo,
+  getTodos,
+} from './api/todos';
 import { Todo } from './types/Todo';
 import classNames from 'classnames';
 import { Filter } from './types/EnumFilter';
@@ -23,11 +29,16 @@ export const App: React.FC = () => {
     setTimeout(() => setErrorMessage(''), 3000);
   };
 
+  const fieldFocus = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     getTodos()
       .then(setTodos)
       .catch(() => {
         showError(Error.load);
+      })
+      .finally(() => {
+        fieldFocus.current?.focus();
       });
   }, []);
 
@@ -38,6 +49,28 @@ export const App: React.FC = () => {
   const activeTodosIds = useMemo(() => {
     return todos.filter(todo => !todo.completed).map(todo => todo.id);
   }, [todos]);
+
+  const handleAddTodo = (
+    newTitle: string,
+    setNewTitle: (newTitle: string) => void,
+  ) => {
+    return addTodo({
+      title: newTitle.trim(),
+      completed: false,
+      userId: USER_ID,
+    })
+      .then(newTodo => {
+        setTodos([...todos, newTodo]);
+        setNewTitle('');
+      })
+      .catch(() => {
+        showError(Error.add);
+      })
+      .finally(() => {
+        setTempTodo(null);
+        fieldFocus.current?.focus();
+      });
+  };
 
   const handleDeleteTodo = (id: number) => {
     setTodosAreLoadingIds(currentTodosAreLoadingIds => [
@@ -54,7 +87,10 @@ export const App: React.FC = () => {
 
         return { error: true };
       })
-      .finally(() => setTodosAreLoadingIds([]));
+      .finally(() => {
+        setTodosAreLoadingIds([]);
+        fieldFocus.current?.focus();
+      });
   };
 
   const handleChangeTodo = ({ id, title, userId, completed }: Todo) => {
@@ -64,13 +100,13 @@ export const App: React.FC = () => {
     ]);
 
     return changeTodo({ id, title, userId, completed })
-      .then(changedTodo =>
+      .then(changedTodo => {
         setTodos(currentTodos => {
           return currentTodos.map(todo =>
             todo.id === id ? changedTodo : todo,
           );
-        }),
-      )
+        });
+      })
       .catch(() => {
         showError(Error.update);
 
@@ -103,12 +139,13 @@ export const App: React.FC = () => {
       <div className="todoapp__content">
         <Header
           todos={todos}
-          setTodos={setTodos}
           showError={showError}
           setTempTodo={setTempTodo}
           tempTodo={tempTodo}
           onChange={handleChangeTodo}
           activeTodosIds={activeTodosIds}
+          fieldFocus={fieldFocus}
+          onAdd={handleAddTodo}
         />
 
         <TodoList
