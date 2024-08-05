@@ -32,13 +32,14 @@ export const App: React.FC = () => {
   const fieldFocus = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    fieldFocus.current?.focus();
+  }, [todos.length, tempTodo]);
+
+  useEffect(() => {
     getTodos()
       .then(setTodos)
       .catch(() => {
         showError(Error.load);
-      })
-      .finally(() => {
-        fieldFocus.current?.focus();
       });
   }, []);
 
@@ -68,7 +69,6 @@ export const App: React.FC = () => {
       })
       .finally(() => {
         setTempTodo(null);
-        fieldFocus.current?.focus();
       });
   };
 
@@ -89,7 +89,6 @@ export const App: React.FC = () => {
       })
       .finally(() => {
         setTodosAreLoadingIds([]);
-        fieldFocus.current?.focus();
       });
   };
 
